@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+
+  # ── Agent Zero — The AI Brain ──────────────────────────────
+  agent-zero:
+    image: agent0ai/agent-zero:latest
+    container_name: kiwiai-agent-zero
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:50001:80"
+    volumes:
+      - ./agent-zero-data:/a0/usr
+      - ./skills:/a0/usr/skills
+    environment:
+      TZ: ${KIWI_TZ:-UTC}
+    env_file:
+      - ./config/.env
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # ── KiwiAI Panel — The Control Interface ──────────────────
+  kiwiai-panel:
+    image: node:20-alpine
+    container_name: kiwiai-panel
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./server:/app
+      - ./panel:/app/public
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      TZ: ${KIWI_TZ:-UTC}
+      AGENT_ZERO_URL: http://agent-zero:80
+    env_file:
+      - ./config/.env
+    command: sh -c "npm install --silent 2>/dev/null; node server.js"
+    depends_on:
+      - agent-zero
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  # ── Telegram Bridge — Your Phone Connection ────────────────
+  kiwiai-telegram:
+    image: node:20-alpine
+    container_name: kiwiai-telegram
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./server:/app
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      TZ: ${KIWI_TZ:-UTC}
+      AGENT_ZERO_URL: http://agent-zero:80
+    env_file:
+      - ./config/.env
+    command: sh -c "npm install --silent 2>/dev/null; node telegram.js"
+    depends_on:
+      - agent-zero
+      - kiwiai-panel

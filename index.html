@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KiwiAI — Your Autonomous Agent</title>
+<style>
+:root {
+  --bg:#0a0c0b; --s1:#111413; --s2:#171a18; --s3:#1e211f; --s4:#252826;
+  --b1:#2a2e2b; --b2:#363b37; --b3:#424744;
+  --kiwi:#7cc63a; --kiwi2:#9dd95a; --kiwi-dim:#4a7a22;
+  --kg:rgba(124,198,58,0.12); --kg2:rgba(124,198,58,0.06);
+  --text:#dde8de; --t2:#8fa990; --t3:#526054; --t4:#364038;
+  --red:#e05252; --amber:#e0a832; --blue:#4a9eff; --purple:#9b7eff;
+  --r:12px; --rs:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+body::before{content:'';position:fixed;top:-20%;left:-5%;width:50%;height:50%;background:radial-gradient(ellipse,rgba(124,198,58,0.05) 0%,transparent 70%);pointer-events:none;z-index:0;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:52px;border-bottom:1px solid var(--b1);background:rgba(10,12,11,0.97);backdrop-filter:blur(16px);position:relative;z-index:100;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;letter-spacing:-0.5px;}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--kiwi),#5a9428);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 12px rgba(124,198,58,0.3);}
+.logo em{color:var(--kiwi);font-style:normal;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.pill{display:flex;align-items:center;gap:5px;padding:3px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;font-size:12px;color:var(--t2);}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--kiwi);box-shadow:0 0 6px var(--kiwi);animation:pulse 2s infinite;}
+.dot.red{background:var(--red);box-shadow:0 0 6px var(--red);}
+.dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.cost-pill{font-family:'Courier New',monospace;font-size:11px;color:var(--kiwi);}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;position:relative;z-index:1;}
+
+/* SIDEBAR */
+.sidebar{width:210px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--b2);}
+.nav-section{padding:10px 8px 2px;}
+.nav-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t4);padding:0 6px;margin-bottom:3px;}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--rs);cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;color:var(--t2);border:none;background:none;width:100%;text-align:left;}
+.nav-btn:hover{background:var(--s2);color:var(--text);}
+.nav-btn.active{background:var(--kg);border:1px solid rgba(124,198,58,.2);color:var(--kiwi);}
+.nav-icon{font-size:15px;width:18px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--kiwi);color:#0a0c0b;font-size:10px;font-weight:800;padding:1px 5px;border-radius:8px;}
+.sidebar-foot{margin-top:auto;padding:10px;border-top:1px solid var(--b1);}
+.model-box{padding:9px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);}
+.model-box-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);margin-bottom:3px;}
+.model-box-name{font-size:13px;font-weight:600;}
+.tier-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-top:3px;}
+.tb-free{background:rgba(124,198,58,.15);color:var(--kiwi);}
+.tb-mid{background:rgba(74,158,255,.15);color:var(--blue);}
+.tb-paid{background:rgba(224,168,50,.15);color:var(--amber);}
+
+/* MAIN */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.panel{display:none;flex:1;overflow-y:auto;flex-direction:column;}
+.panel.active{display:flex;}
+.panel::-webkit-scrollbar{width:4px;}
+.panel::-webkit-scrollbar-thumb{background:var(--b2);}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:100%;}
+.messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth;}
+.messages::-webkit-scrollbar{width:4px;}
+.messages::-webkit-scrollbar-thumb{background:var(--b2);}
+.msg{display:flex;gap:8px;animation:msgIn .2s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.msg.user{flex-direction:row-reverse;align-self:flex-end;max-width:72%;}
+.msg.assistant{max-width:82%;}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;margin-top:2px;}
+.msg.assistant .av{background:linear-gradient(135deg,var(--kiwi),var(--kiwi-dim));color:#0a0c0b;}
+.msg.user .av{background:var(--s3);color:var(--t2);font-size:13px;}
+.msg-body{display:flex;flex-direction:column;gap:3px;}
+.bubble{padding:9px 13px;border-radius:13px;font-size:14px;line-height:1.6;}
+.msg.assistant .bubble{background:var(--s2);border:1px solid var(--b1);border-top-left-radius:3px;color:var(--text);}
+.msg.user .bubble{background:var(--kiwi);color:#0a0c0b;border-top-right-radius:3px;font-weight:500;}
+.msg-meta{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);padding:0 2px;}
+.msg.user .msg-meta{justify-content:flex-end;}
+.meta-tag{background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:1px 5px;font-family:'Courier New',monospace;font-size:10px;color:var(--t2);}
+.meta-cost{color:var(--kiwi);font-family:'Courier New',monospace;}
+.typing-bubble{padding:9px 13px;background:var(--s2);border:1px solid var(--b1);border-radius:13px;border-top-left-radius:3px;display:flex;align-items:center;gap:4px;}
+.typing-bubble span{width:5px;height:5px;border-radius:50%;background:var(--t3);animation:bounce 1.2s infinite;}
+.typing-bubble span:nth-child(2){animation-delay:.2s;}
+.typing-bubble span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-5px);opacity:1;}}
+
+/* Welcome */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;gap:12px;}
+.welcome-icon{font-size:48px;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+.welcome h2{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
+.welcome p{font-size:14px;color:var(--t2);max-width:360px;line-height:1.6;}
+.quick-grid{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:6px;}
+.qbtn{padding:6px 13px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;cursor:pointer;font-size:12px;color:var(--t2);transition:all .15s;font-family:inherit;}
+.qbtn:hover{background:var(--s3);color:var(--text);border-color:var(--b2);}
+
+/* Input */
+.input-area{padding:12px 18px 16px;border-top:1px solid var(--b1);background:rgba(10,12,11,.92);backdrop-filter:blur(12px);flex-shrink:0;}
+.input-box{display:flex;gap:7px;align-items:flex-end;background:var(--s2);border:1px solid var(--b1);border-radius:11px;padding:7px 9px;transition:border-color .2s;}
+.input-box:focus-within{border-color:var(--kiwi-dim);}
+.chat-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;resize:none;max-height:110px;line-height:1.5;padding:2px 0;}
+.chat-input::placeholder{color:var(--t3);}
+.send-btn{width:32px;height:32px;border-radius:7px;background:var(--kiwi);border:none;color:#0a0c0b;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.send-btn:hover{background:var(--kiwi2);transform:scale(1.05);}
+.send-btn:disabled{background:var(--s4);color:var(--t3);cursor:not-allowed;transform:none;}
+.input-meta{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:11px;color:var(--t3);}
+.model-chip{display:flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--b1);border-radius:5px;padding:2px 7px;font-family:'Courier New',monospace;font-size:10px;color:var(--t2);}
+
+/* Generic panel */
+.pcontent{padding:24px;max-width:860px;}
+.pheader{margin-bottom:24px;}
+.ptitle{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px;}
+.psub{font-size:13px;color:var(--t2);line-height:1.5;}
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px;margin-bottom:14px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:3px;}
+.card-desc{font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.5;}
+.flabel{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.flabel a{color:var(--kiwi);text-decoration:none;font-size:11px;}
+.flabel a:hover{text-decoration:underline;}
+.inp{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:8px 10px;color:var(--text);font-family:'Courier New',monospace;font-size:12px;outline:none;transition:border-color .2s;margin-bottom:10px;}
+.inp:focus{border-color:var(--kiwi-dim);}
+.inp::placeholder{color:var(--t3);}
+.inp-row{display:grid;grid-template-columns:1fr auto;gap:7px;margin-bottom:10px;}
+.inp-row .inp{margin-bottom:0;}
+.ks{display:flex;align-items:center;gap:4px;padding:8px 10px;border-radius:var(--rs);font-size:11px;font-weight:700;white-space:nowrap;height:36px;}
+.ks-ok{background:rgba(124,198,58,.1);color:var(--kiwi);border:1px solid rgba(124,198,58,.25);}
+.ks-no{background:var(--s2);color:var(--t3);border:1px solid var(--b1);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-p{background:var(--kiwi);color:#0a0c0b;}
+.btn-p:hover{background:var(--kiwi2);transform:translateY(-1px);}
+.btn-g{background:transparent;color:var(--t2);border:1px solid var(--b1);}
+.btn-g:hover{background:var(--s2);color:var(--text);}
+.btn-d{background:rgba(224,82,82,.1);color:var(--red);border:1px solid rgba(224,82,82,.25);}
+.btn-d:hover{background:rgba(224,82,82,.2);}
+
+/* Skills */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.skill-card{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;position:relative;}
+.skill-card:hover{background:var(--s3);border-color:var(--b2);}
+.skill-card.on{border-color:rgba(124,198,58,.4);background:var(--kg2);}
+.sk-badge{position:absolute;top:10px;right:10px;width:16px;height:16px;background:var(--kiwi);color:#0a0c0b;border-radius:50%;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;opacity:0;}
+.skill-card.on .sk-badge{opacity:1;}
+.sk-icon{font-size:22px;margin-bottom:7px;}
+.sk-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.sk-desc{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:6px;}
+.sk-tag{font-size:10px;color:var(--t3);font-family:'Courier New',monospace;}
+
+/* Schedule */
+.sch-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.sch-item{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:11px 13px;}
+.sch-item.active{border-color:rgba(124,198,58,.3);}
+.sch-icon{font-size:18px;width:24px;text-align:center;}
+.sch-info{flex:1;}
+.sch-name{font-size:13px;font-weight:600;margin-bottom:1px;}
+.sch-time{font-size:11px;color:var(--t2);font-family:'Courier New',monospace;}
+.sch-status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;}
+.ss-active{background:rgba(124,198,58,.12);color:var(--kiwi);}
+.ss-paused{background:var(--s3);color:var(--t3);}
+
+/* Router table */
+.rtable{width:100%;border-collapse:collapse;font-size:13px;}
+.rtable th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3);border-bottom:1px solid var(--b1);}
+.rtable td{padding:10px 10px;border-bottom:1px solid var(--b1);vertical-align:middle;}
+.rtable tr:last-child td{border-bottom:none;}
+.rtable tr:hover td{background:var(--s2);}
+.rank{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--s3);border:1px solid var(--b2);font-size:10px;font-weight:700;color:var(--t2);}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px;}
+.stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;}
+.stat-val{font-size:24px;font-weight:800;margin-bottom:2px;font-family:'Courier New',monospace;}
+.stat-lbl{font-size:11px;color:var(--t2);}
+.stat-sub{font-size:10px;color:var(--t3);margin-top:3px;}
+
+/* Telegram */
+.tg-steps{display:flex;flex-direction:column;gap:10px;}
+.tg-step{display:flex;gap:10px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:12px;}
+.tg-num{width:24px;height:24px;border-radius:50%;background:var(--kg);border:1px solid rgba(124,198,58,.3);color:var(--kiwi);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tg-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+.tg-desc{font-size:12px;color:var(--t2);line-height:1.5;}
+code{background:var(--s3);border:1px solid var(--b2);padding:1px 5px;border-radius:4px;font-family:'Courier New',monospace;font-size:11px;color:var(--kiwi);}
+
+/* Toast */
+.toasts{position:fixed;bottom:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:7px;}
+.toast{display:flex;align-items:center;gap:7px;padding:9px 13px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);font-size:13px;animation:tIn .2s ease;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:280px;}
+@keyframes tIn{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:translateX(0);}}
+.toast.ok{border-color:rgba(124,198,58,.3);}
+.toast.err{border-color:rgba(224,82,82,.3);}
+
+/* Memory panel */
+.mem-list{display:flex;flex-direction:column;gap:7px;}
+.mem-item{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--b1);border-radius:var(--rs);padding:9px 12px;}
+.mem-key{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);width:100px;}
+.mem-val{font-size:13px;font-weight:500;flex:1;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🥝</div>
+    Kiwi<em>AI</em>
+  </div>
+  <div class="topbar-right">
+    <div class="pill"><div class="dot" id="dot"></div><span id="agentStatus">Connecting...</span></div>
+    <div class="pill cost-pill">💰 <span id="sessionCost">$0.0000</span></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Assistant</div>
+      <button class="nav-btn active" onclick="nav('chat',this)"><span class="nav-icon">💬</span>Chat</button>
+      <button class="nav-btn" onclick="nav('schedule',this)"><span class="nav-icon">⏰</span>Scheduler<span class="nav-badge" id="taskBadge" style="display:none">0</span></button>
+      <button class="nav-btn" onclick="nav('memory',this)"><span class="nav-icon">🧠</span>Memory</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Config</div>
+      <button class="nav-btn" onclick="nav('setup',this)"><span class="nav-icon">⚙️</span>Setup</button>
+      <button class="nav-btn" onclick="nav('skills',this)"><span class="nav-icon">🧩</span>Skills</button>
+      <button class="nav-btn" onclick="nav('telegram',this)"><span class="nav-icon">✈️</span>Telegram</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Intelligence</div>
+      <button class="nav-btn" onclick="nav('router',this)"><span class="nav-icon">🔄</span>Model Router</button>
+      <button class="nav-btn" onclick="nav('stats',this)"><span class="nav-icon">📊</span>Stats</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Agent Zero</div>
+      <button class="nav-btn" onclick="window.open(location.origin+'/agent','_blank')"><span class="nav-icon">🤖</span>Agent Zero ↗</button>
+    </div>
+    <div class="sidebar-foot">
+      <div class="model-box">
+        <div class="model-box-label">Active Model</div>
+        <div class="model-box-name" id="sbModel">Loading...</div>
+        <div><span class="tier-badge" id="sbTier">—</span></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- CHAT -->
+    <div id="panel-chat" class="panel active">
+      <div class="chat-wrap">
+        <div class="messages" id="messages">
+          <div class="welcome" id="welcomeScreen">
+            <div class="welcome-icon">🥝</div>
+            <h2>Your Agent is Live 24/7</h2>
+            <p>Running on your server right now. Always on. Ask anything, schedule tasks, or set up Telegram to reach me from your phone.</p>
+            <div class="quick-grid">
+              <button class="qbtn" onclick="q('What can you do for me?')">🤔 What can you do?</button>
+              <button class="qbtn" onclick="q('Give me a morning briefing - news, weather, tasks')">☀️ Morning briefing</button>
+              <button class="qbtn" onclick="q('Help me write a professional email')">✉️ Write an email</button>
+              <button class="qbtn" onclick="q('Research the top AI news from the past 24 hours')">📰 AI news</button>
+              <button class="qbtn" onclick="q('Help me plan my week')">📅 Plan my week</button>
+              <button class="qbtn" onclick="q('What are my scheduled tasks?')">📋 My tasks</button>
+              <button class="qbtn" onclick="q('Analyze this text and give me key takeaways: ')">📝 Summarize</button>
+              <button class="qbtn" onclick="q('Write a LinkedIn post about productivity and AI')">💼 LinkedIn post</button>
+            </div>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="input-box">
+            <textarea class="chat-input" id="chatInput" placeholder="Ask your agent anything..." rows="1"
+              onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendChat()">↑</button>
+          </div>
+          <div class="input-meta">
+            <div class="model-chip">⚡ <span id="inputModel">No model — add key in Setup</span></div>
+            <span id="skillChips" style="display:flex;gap:5px;flex-wrap:wrap;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETUP -->
+    <div id="panel-setup" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Setup</h1>
+          <p class="psub">API keys are stored on your server only — never shared with anyone except the AI provider you choose.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🟢 Free Models — Start Here</div>
+          <div class="card-desc">Get a Groq key in 60 seconds with no credit card. This will power 80%+ of your tasks for free.</div>
+
+          <div class="flabel">Groq API Key — Llama 3.3 70B (Fast & Free)
+            <a href="https://console.groq.com" target="_blank">Get free key →</a>
+          </div>
+          <div class="inp-row">
+            <input type="password" class="inp" id="k-GROQ_API_KEY" placeholder="gsk_..." oninput="keyChange('GROQ_API_KEY',this.value)">
+            <div class="ks ks-no" id="ks-GROQ_API_KEY">—</div>
+          </div>
+
+          <div class="flabel">Google Gemini API Key — Flash 2.0 (Long context, Free tier)
+            <a href="https://aistudio.google.com/app/apikey" target="_blank">Get free key →</a>
+          </div>
+          <div class="inp-row">
+            <input type="password" class="inp" id="k-GEMINI_API_KEY" placeholder="AIza..." oninput="keyChange('GEMINI_API_KEY',this.value)">
+            <div class="ks ks-no" id="ks-GEMINI_API_KEY">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔵 Kimi K2 Thinking — Deep Reasoning (Recommended)</div>
+          <div class="card-desc">Best open-source reasoning model available. $0.60/$2.50 per million tokens via OpenRouter. This is what your agent uses for complex multi-step tasks — research, planning, analysis.</div>
+
+          <div class="flabel">OpenRouter API Key — Access Kimi K2 + 100+ models
+            <a href="https://openrouter.ai/keys" target="_blank">Get key →</a>
+          </div>
+          <div class="inp-row">
+            <input type="password" class="inp" id="k-OPENROUTER_API_KEY" placeholder="sk-or-..." oninput="keyChange('OPENROUTER_API_KEY',this.value)">
+            <div class="ks ks-no" id="ks-OPENROUTER_API_KEY">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">💳 Optional Paid Models</div>
+          <div class="card-desc">Only used as final fallback. Add if you want GPT-4o or Claude available.</div>
+
+          <div class="flabel">OpenAI API Key
+            <a href="https://platform.openai.com/api-keys" target="_blank">Get key →</a>
+          </div>
+          <div class="inp-row">
+            <input type="password" class="inp" id="k-OPENAI_API_KEY" placeholder="sk-..." oninput="keyChange('OPENAI_API_KEY',this.value)">
+            <div class="ks ks-no" id="ks-OPENAI_API_KEY">—</div>
+          </div>
+
+          <div class="flabel">Anthropic API Key
+            <a href="https://console.anthropic.com/settings/keys" target="_blank">Get key →</a>
+          </div>
+          <div class="inp-row">
+            <input type="password" class="inp" id="k-ANTHROPIC_API_KEY" placeholder="sk-ant-..." oninput="keyChange('ANTHROPIC_API_KEY',this.value)">
+            <div class="ks ks-no" id="ks-ANTHROPIC_API_KEY">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">👤 Your Profile</div>
+          <div class="card-desc">KiwiAI uses this to personalize responses and remember context across sessions.</div>
+          <div class="flabel">Your name</div>
+          <input type="text" class="inp" id="k-USER_NAME" placeholder="e.g. Alex" oninput="keyChange('USER_NAME',this.value)">
+          <div class="flabel">What you do</div>
+          <input type="text" class="inp" id="k-USER_ROLE" placeholder="e.g. Startup founder, Marketing manager, Developer..." oninput="keyChange('USER_ROLE',this.value)">
+        </div>
+
+        <button class="btn btn-p" onclick="saveKeys()">💾 Save & Apply All Changes</button>
+      </div>
+    </div>
+
+    <!-- SKILLS -->
+    <div id="panel-skills" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Skills</h1>
+          <p class="psub">Toggle the capabilities your agent uses. Active skills are applied to every conversation and autonomous task.</p>
+        </div>
+        <div class="skills-grid" id="skillsGrid"></div>
+      </div>
+    </div>
+
+    <!-- TELEGRAM -->
+    <div id="panel-telegram" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Telegram Integration</h1>
+          <p class="psub">Connect KiwiAI to Telegram so you can chat with your agent from your phone and receive proactive alerts anywhere.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">📱 5-Minute Setup</div>
+          <div class="tg-steps">
+            <div class="tg-step">
+              <div class="tg-num">1</div>
+              <div>
+                <div class="tg-title">Open Telegram and create a bot</div>
+                <div class="tg-desc">Search for <code>@BotFather</code>, start a chat, send <code>/newbot</code>. Follow the prompts to name your bot. You'll receive a token like <code>1234567890:ABC-DEFxyz...</code></div>
+              </div>
+            </div>
+            <div class="tg-step">
+              <div class="tg-num">2</div>
+              <div>
+                <div class="tg-title">Paste your bot token</div>
+                <div class="tg-desc">Copy the token from BotFather and paste below.</div>
+                <div style="margin-top:8px;">
+                  <div class="inp-row">
+                    <input type="password" class="inp" id="k-TELEGRAM_BOT_TOKEN" placeholder="1234567890:ABC-DEFxyz..." oninput="keyChange('TELEGRAM_BOT_TOKEN',this.value)" style="margin-bottom:0;">
+                    <div class="ks ks-no" id="ks-TELEGRAM_BOT_TOKEN">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tg-step">
+              <div class="tg-num">3</div>
+              <div>
+                <div class="tg-title">Get your Chat ID</div>
+                <div class="tg-desc">Send <code>/start</code> to your new bot in Telegram. Then visit:<br><code>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</code><br>Find the <code>"chat":{"id":...</code> number in the JSON.</div>
+              </div>
+            </div>
+            <div class="tg-step">
+              <div class="tg-num">4</div>
+              <div>
+                <div class="tg-title">Paste your Chat ID</div>
+                <div class="tg-desc">This locks your bot so only you can use it.</div>
+                <div style="margin-top:8px;">
+                  <input type="text" class="inp" id="k-TELEGRAM_CHAT_ID" placeholder="123456789" oninput="keyChange('TELEGRAM_CHAT_ID',this.value)" style="margin-bottom:0;">
+                </div>
+              </div>
+            </div>
+            <div class="tg-step">
+              <div class="tg-num">5</div>
+              <div>
+                <div class="tg-title">Save and test</div>
+                <div class="tg-desc">Hit save, then send your bot any message — it should reply within seconds.</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;">
+            <button class="btn btn-p" onclick="saveKeys()">💾 Save</button>
+            <button class="btn btn-g" onclick="testTelegram()">🧪 Send Test Message</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔔 Proactive Alerts</div>
+          <div class="card-desc">KiwiAI will reach out to you automatically for these events.</div>
+          <div style="display:flex;flex-direction:column;gap:9px;">
+            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="n-morning" checked style="accent-color:var(--kiwi);width:15px;height:15px;">
+              ☀️ Daily morning briefing (news + tasks)
+            </label>
+            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="n-tasks" checked style="accent-color:var(--kiwi);width:15px;height:15px;">
+              ✅ Scheduled task completions
+            </label>
+            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="n-errors" checked style="accent-color:var(--kiwi);width:15px;height:15px;">
+              ⚠️ Errors or agent issues
+            </label>
+            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="n-weekly" style="accent-color:var(--kiwi);width:15px;height:15px;">
+              📊 Weekly cost and activity summary
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULER -->
+    <div id="panel-schedule" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Scheduler</h1>
+          <p class="psub">Tell your agent what to do automatically and when. Just plain English — no cron syntax needed.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">➕ Add a Task</div>
+          <div class="flabel">Task name</div>
+          <input type="text" class="inp" id="sch-name" placeholder="e.g. Morning news briefing">
+          <div class="flabel">What should your agent do?</div>
+          <textarea class="inp" id="sch-task" rows="3" placeholder="e.g. Search for the top 5 AI news stories from the last 24 hours, summarize them, and send me a Telegram message" style="resize:vertical;font-family:inherit;font-size:13px;"></textarea>
+          <div class="flabel">When?</div>
+          <input type="text" class="inp" id="sch-when" placeholder="e.g. Every day at 8am  |  Every Monday at 9am  |  Every hour">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Examples: "Every day at 7am" · "Every Monday at 9am" · "Every Friday at 5pm" · "Every hour"</div>
+          <button class="btn btn-p" onclick="addTask()">⏰ Schedule This Task</button>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px;">Scheduled Tasks</div>
+          <div class="sch-list" id="schList"><div style="font-size:13px;color:var(--t3);padding:14px;text-align:center;">No tasks yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROUTER -->
+    <div id="panel-router" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Model Router</h1>
+          <p class="psub">KiwiAI automatically picks the best model for every task — free first, reasoning when needed, paid only as a last resort.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Priority Ladder</div>
+          <div class="card-desc">Models are tried top to bottom. The first one with a valid API key gets the task, unless complexity overrides.</div>
+          <table class="rtable">
+            <thead><tr><th>#</th><th>Model</th><th>Provider</th><th>Cost</th><th>Best For</th><th>Status</th></tr></thead>
+            <tbody id="routerBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">🧠 Routing Logic</div>
+          <table class="rtable">
+            <thead><tr><th>Message Type</th><th>How Detected</th><th>Routed To</th></tr></thead>
+            <tbody>
+              <tr><td>Simple Q&A</td><td>Short message, direct question</td><td><span class="tier-badge tb-free">Free</span></td></tr>
+              <tr><td>Writing tasks</td><td>write, draft, email, post, article</td><td><span class="tier-badge tb-free">Free</span></td></tr>
+              <tr><td>Code</td><td>code, script, function, debug</td><td><span class="tier-badge tb-free">Free</span></td></tr>
+              <tr><td>Multi-step reasoning</td><td>analyze, research, reason, plan, compare</td><td><span class="tier-badge tb-mid">Kimi K2</span></td></tr>
+              <tr><td>Long messages (800+ chars)</td><td>Message length</td><td><span class="tier-badge tb-mid">Kimi K2 → Paid fallback</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div id="panel-stats" class="panel">
+      <div class="pcontent">
+        <div class="pheader"><h1 class="ptitle">Stats & Costs</h1><p class="psub">Full transparency on every API call your agent makes.</p></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" style="color:var(--kiwi)" id="st-total">$0.00</div><div class="stat-lbl">Total Cost</div><div class="stat-sub">All time</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-msgs">0</div><div class="stat-lbl">Messages</div><div class="stat-sub">All time</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--kiwi)" id="st-free">--%</div><div class="stat-lbl">Free Model Usage</div><div class="stat-sub">% of all messages</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-tasks">0</div><div class="stat-lbl">Tasks Scheduled</div><div class="stat-sub">Active automations</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Usage</div>
+          <table class="rtable">
+            <thead><tr><th>Time</th><th>Model</th><th>Tier</th><th>Tokens</th><th>Cost</th></tr></thead>
+            <tbody id="costLog"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMORY -->
+    <div id="panel-memory" class="panel">
+      <div class="pcontent">
+        <div class="pheader">
+          <h1 class="ptitle">Memory</h1>
+          <p class="psub">What your agent has learned about you from your conversations. This context is added to every message automatically.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">What KiwiAI knows about you</div>
+          <div class="card-desc">Automatically extracted from your conversations. The more you chat, the better it gets.</div>
+          <div class="mem-list" id="memList"><div style="font-size:13px;color:var(--t3);padding:10px;">Loading memory...</div></div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-d" onclick="clearMemory()">🗑 Clear All Memory</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let pendingKeys = {};
+let sessionCost = 0;
+let chatHistory = [];
+let activeSkills = JSON.parse(localStorage.getItem('kiwiai_skills') || '{}');
+let isThinking = false;
+
+// ═══════════════════════════════════════════════════
+// SKILLS DEFINITION
+// ═══════════════════════════════════════════════════
+const SKILLS = [
+  { id:'research',   icon:'🔍', name:'Web Research',      desc:'Real-time web search and fact synthesis.',         tag:'SearXNG (built-in)' },
+  { id:'email',      icon:'📧', name:'Email Manager',      desc:'Draft, reply, organize and summarize emails.',      tag:'Gmail via MCP' },
+  { id:'calendar',   icon:'📅', name:'Calendar',           desc:'Check schedule, create events, find free time.',    tag:'Google Calendar via MCP' },
+  { id:'writing',    icon:'✍️', name:'Writing Assistant',  desc:'Professional emails, posts, reports, essays.',      tag:'All models' },
+  { id:'code',       icon:'💻', name:'Code Helper',        desc:'Write, debug, review code in any language.',        tag:'Groq / Kimi K2' },
+  { id:'summarize',  icon:'📋', name:'Summarizer',         desc:'Paste anything — get a concise summary.',           tag:'Groq Llama 3' },
+  { id:'social',     icon:'📱', name:'Social Media',       desc:'LinkedIn, Twitter/X, Instagram content.',           tag:'All models' },
+  { id:'finance',    icon:'💰', name:'Finance',            desc:'Budget analysis, expense tracking, stock lookup.',  tag:'Free APIs' },
+  { id:'meetings',   icon:'🎤', name:'Meeting Notes',      desc:'Paste transcript → summary + action items.',        tag:'Kimi K2 / GPT-4o' },
+  { id:'translate',  icon:'🌍', name:'Translator',         desc:'Translate between 100+ languages.',                 tag:'Groq / Gemini' },
+  { id:'planner',    icon:'🎯', name:'Goal Planner',       desc:'Break goals into weekly action plans.',             tag:'Kimi K2' },
+  { id:'news',       icon:'📰', name:'News Briefing',      desc:'Daily news digest sent to Telegram.',               tag:'SearXNG + Scheduler' },
+  { id:'seo',        icon:'🔎', name:'SEO Assistant',      desc:'Keyword research, content optimization.',           tag:'Kimi K2' },
+  { id:'data',       icon:'📊', name:'Data Analyst',       desc:'Analyze spreadsheets, charts, numbers.',            tag:'Code interpreter' },
+  { id:'legal',      icon:'⚖️', name:'Contract Reviewer',  desc:'Review documents, flag key clauses.',               tag:'Kimi K2 / Claude' },
+  { id:'creative',   icon:'🎨', name:'Creative Writer',    desc:'Stories, scripts, brainstorming.',                  tag:'All models' },
+];
+
+// ═══════════════════════════════════════════════════
+// MODELS
+// ═══════════════════════════════════════════════════
+const MODELS = [
+  { id:'groq-llama',   name:'Llama 3.3 70B',    provider:'Groq',       tier:'free', cost:'Free',       key:'GROQ_API_KEY' },
+  { id:'gemini-flash', name:'Gemini 2.0 Flash',  provider:'Google',     tier:'free', cost:'Free tier',  key:'GEMINI_API_KEY' },
+  { id:'kimi-k2',      name:'Kimi K2 Thinking',  provider:'OpenRouter', tier:'mid',  cost:'$0.60/1M',   key:'OPENROUTER_API_KEY' },
+  { id:'gpt4o-mini',   name:'GPT-4o mini',        provider:'OpenAI',     tier:'paid', cost:'$0.15/1M',   key:'OPENAI_API_KEY' },
+  { id:'claude-haiku', name:'Claude 3.5 Haiku',   provider:'Anthropic',  tier:'paid', cost:'$0.25/1M',   key:'ANTHROPIC_API_KEY' },
+  { id:'gpt4o',        name:'GPT-4o',             provider:'OpenAI',     tier:'paid', cost:'$3.00/1M',   key:'OPENAI_API_KEY' },
+];
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function nav(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'skills')   renderSkills();
+  if (id === 'router')   renderRouter();
+  if (id === 'stats')    loadStats();
+  if (id === 'schedule') loadTasks();
+  if (id === 'memory')   loadMemory();
+}
+
+// ═══════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════
+async function sendChat(override) {
+  const input = document.getElementById('chatInput');
+  const text = override || input.value.trim();
+  if (!text || isThinking) return;
+
+  document.getElementById('welcomeScreen')?.remove();
+  input.value = ''; resize(input);
+  addMsg('user', text);
+  chatHistory.push({ role:'user', content:text });
+  isThinking = true;
+  document.getElementById('sendBtn').disabled = true;
+  const tid = showTyping();
+
+  try {
+    const skills = Object.keys(activeSkills).filter(k => activeSkills[k]);
+    const res = await fetch('/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message:text, history:chatHistory.slice(-10), skills })
+    });
+    const d = await res.json();
+    removeTyping(tid);
+    if (d.error) { addMsg('assistant', `⚠️ ${d.error}`); }
+    else {
+      const cost = d.cost || 0;
+      sessionCost += cost;
+      document.getElementById('sessionCost').textContent = '$' + sessionCost.toFixed(4);
+      chatHistory.push({ role:'assistant', content: d.response });
+      addMsg('assistant', d.response, d.model, cost);
+    }
+  } catch(e) {
+    removeTyping(tid);
+    addMsg('assistant', `⚠️ Connection error: ${e.message}`);
+  }
+  isThinking = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function q(t) { sendChat(t); }
+
+function addMsg(role, text, model, cost) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const meta = (model && role === 'assistant') ? `
+    <div class="msg-meta">
+      <span class="meta-tag">⚡ ${model.name}</span>
+      <span class="meta-cost">${cost > 0 ? '$'+cost.toFixed(5) : 'Free'}</span>
+    </div>` : '';
+  div.innerHTML = `
+    <div class="av">${role==='user'?'👤':'K'}</div>
+    <div class="msg-body">
+      <div class="bubble">${md(text)}</div>${meta}
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+let tc = 0;
+function showTyping() {
+  const id = 'ty'+(++tc);
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant'; div.id = id;
+  div.innerHTML = `<div class="av">K</div><div class="msg-body"><div class="typing-bubble"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+function removeTyping(id) { document.getElementById(id)?.remove(); }
+
+function md(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^#{3} (.+)$/gm,'<strong>$1</strong>')
+    .replace(/^#{2} (.+)$/gm,'<strong style="font-size:15px;">$1</strong>')
+    .replace(/^[-*] (.+)$/gm,'<li style="margin-left:16px;margin-bottom:2px">$1</li>')
+    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+}
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,110)+'px'; }
+
+// ═══════════════════════════════════════════════════
+// KEYS / SETUP
+// ═══════════════════════════════════════════════════
+function keyChange(envKey, value) {
+  pendingKeys[envKey] = value;
+  const ks = document.getElementById('ks-'+envKey);
+  if (ks) {
+    const valid = value.length > 8;
+    ks.className = 'ks ' + (valid ? 'ks-ok' : 'ks-no');
+    ks.textContent = valid ? '✓ Set' : '—';
+  }
+  updateModelChip();
+}
+
+async function saveKeys() {
+  if (!Object.keys(pendingKeys).length) { toast('No changes to save', 'ok'); return; }
+  try {
+    await fetch('/api/keys', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(pendingKeys)
+    });
+    pendingKeys = {};
+    toast('✓ Saved and applied!', 'ok');
+    updateModelChip();
+    renderRouter();
+    checkStatus();
+  } catch(e) { toast('Error: '+e.message, 'err'); }
+}
+
+async function loadKeys() {
+  try {
+    const res = await fetch('/api/keys');
+    const keys = await res.json();
+    ['GROQ_API_KEY','GEMINI_API_KEY','OPENROUTER_API_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY',
+     'TELEGRAM_BOT_TOKEN','TELEGRAM_CHAT_ID','USER_NAME','USER_ROLE'].forEach(k => {
+      const el = document.getElementById('k-'+k);
+      const ks = document.getElementById('ks-'+k);
+      const val = keys[k] || '';
+      if (el) el.placeholder = val || el.placeholder;
+      if (ks && val && val.includes('•')) {
+        ks.className = 'ks ks-ok'; ks.textContent = '✓ Set';
+        localStorage.setItem('ks_'+k, '1');
+      }
+    });
+  } catch {}
+}
+
+function updateModelChip() {
+  const stored = {};
+  ['GROQ_API_KEY','GEMINI_API_KEY','OPENROUTER_API_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY'].forEach(k => {
+    const el = document.getElementById('k-'+k);
+    if ((el && el.value.length > 8) || localStorage.getItem('ks_'+k)) stored[k] = true;
+  });
+  // also check pending
+  Object.entries(pendingKeys).forEach(([k,v]) => { if(v.length>8) stored[k]=true; });
+  for (const m of MODELS) {
+    if (stored[m.key]) { document.getElementById('inputModel').textContent = m.name + (m.tier==='free'?' (Free)':m.tier==='mid'?' (Reasoning)':''); return; }
+  }
+  document.getElementById('inputModel').textContent = 'No model — add key in Setup';
+}
+
+async function testTelegram() {
+  try {
+    const r = await fetch('/api/telegram/test', { method:'POST' });
+    const d = await r.json();
+    toast(d.ok ? '✓ Test message sent to Telegram!' : '✗ '+d.error, d.ok?'ok':'err');
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+// ═══════════════════════════════════════════════════
+// SKILLS
+// ═══════════════════════════════════════════════════
+function renderSkills() {
+  document.getElementById('skillsGrid').innerHTML = SKILLS.map(s => `
+    <div class="skill-card ${activeSkills[s.id]?'on':''}" onclick="toggleSkill('${s.id}')">
+      <div class="sk-badge">✓</div>
+      <div class="sk-icon">${s.icon}</div>
+      <div class="sk-name">${s.name}</div>
+      <div class="sk-desc">${s.desc}</div>
+      <div class="sk-tag">🔌 ${s.tag}</div>
+    </div>`).join('');
+  updateSkillChips();
+}
+
+function toggleSkill(id) {
+  activeSkills[id] = !activeSkills[id];
+  localStorage.setItem('kiwiai_skills', JSON.stringify(activeSkills));
+  renderSkills();
+}
+
+function updateSkillChips() {
+  const on = SKILLS.filter(s => activeSkills[s.id]);
+  const el = document.getElementById('skillChips');
+  el.innerHTML = on.length
+    ? on.map(s=>`<span style="background:var(--kg2);border:1px solid rgba(124,198,58,.2);color:var(--kiwi);padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;">${s.icon} ${s.name}</span>`).join('')
+    : '<span style="color:var(--t3);font-size:11px;">No skills active — enable in Skills tab</span>';
+}
+
+// ═══════════════════════════════════════════════════
+// SCHEDULER
+// ═══════════════════════════════════════════════════
+async function addTask() {
+  const name = document.getElementById('sch-name').value.trim();
+  const task = document.getElementById('sch-task').value.trim();
+  const when = document.getElementById('sch-when').value.trim();
+  if (!name||!task||!when) { toast('Fill in all fields','err'); return; }
+  try {
+    await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,task,when,active:true})});
+    document.getElementById('sch-name').value='';
+    document.getElementById('sch-task').value='';
+    document.getElementById('sch-when').value='';
+    toast('✓ Task scheduled!','ok'); loadTasks();
+  } catch(e) { toast('Error: '+e.message,'err'); }
+}
+
+async function loadTasks() {
+  try {
+    const tasks = await fetch('/api/tasks').then(r=>r.json());
+    const list = document.getElementById('schList');
+    const badge = document.getElementById('taskBadge');
+    if (!tasks.length) {
+      list.innerHTML='<div style="font-size:13px;color:var(--t3);padding:14px;text-align:center;">No scheduled tasks yet.</div>';
+      badge.style.display='none'; return;
+    }
+    badge.style.display=''; badge.textContent=tasks.length;
+    list.innerHTML = tasks.map(t=>`
+      <div class="sch-item ${t.active?'active':''}">
+        <div class="sch-icon">⏰</div>
+        <div class="sch-info">
+          <div class="sch-name">${t.name}</div>
+          <div class="sch-time">${t.when}</div>
+        </div>
+        <span class="sch-status ${t.active?'ss-active':'ss-paused'}">${t.active?'Active':'Paused'}</span>
+        <button class="btn btn-g" style="padding:3px 9px;font-size:11px;" onclick="toggleTask(${t.id})">${t.active?'Pause':'Resume'}</button>
+        <button class="btn btn-d" style="padding:3px 9px;font-size:11px;" onclick="deleteTask(${t.id})">✕</button>
+      </div>`).join('');
+  } catch {}
+}
+
+async function deleteTask(id) {
+  await fetch('/api/tasks/'+id,{method:'DELETE'});
+  loadTasks();
+}
+async function toggleTask(id) {
+  await fetch('/api/tasks/'+id+'/toggle',{method:'POST'});
+  loadTasks();
+}
+
+// ═══════════════════════════════════════════════════
+// ROUTER
+// ═══════════════════════════════════════════════════
+function renderRouter() {
+  const bestFor = { 'groq-llama':'Chat, Q&A, writing, code', 'gemini-flash':'Long docs, research', 'kimi-k2':'Multi-step reasoning, analysis', 'gpt4o-mini':'Reliable fallback', 'claude-haiku':'Nuanced writing', 'gpt4o':'Maximum intelligence' };
+  document.getElementById('routerBody').innerHTML = MODELS.map((m,i) => {
+    const hasKey = !!localStorage.getItem('ks_'+m.key);
+    const tierClass = m.tier==='free'?'tb-free':m.tier==='mid'?'tb-mid':'tb-paid';
+    return `<tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td><strong>${m.name}</strong></td>
+      <td style="color:var(--t2)">${m.provider}</td>
+      <td><span class="tier-badge ${tierClass}">${m.cost}</span></td>
+      <td style="color:var(--t2);font-size:12px;">${bestFor[m.id]||''}</td>
+      <td style="color:${hasKey?'var(--kiwi)':'var(--t3)'}">${hasKey?'✓ Ready':'— No key'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const costs = await fetch('/api/costs').then(r=>r.json());
+    const tasks  = await fetch('/api/tasks').then(r=>r.json());
+    document.getElementById('st-total').textContent = '$'+(costs.total||0).toFixed(4);
+    const entries = costs.entries||[];
+    document.getElementById('st-msgs').textContent = entries.length;
+    document.getElementById('st-tasks').textContent = tasks.length;
+    const freeCount = entries.filter(e=>e.cost===0).length;
+    const pct = entries.length ? Math.round(freeCount/entries.length*100) : 0;
+    document.getElementById('st-free').textContent = pct+'%';
+    const log = document.getElementById('costLog');
+    log.innerHTML = [...entries].reverse().slice(0,20).map(e=>`
+      <tr>
+        <td style="color:var(--t3);font-family:'Courier New',monospace;font-size:11px;">${new Date(e.ts).toLocaleTimeString()}</td>
+        <td>${e.model}</td>
+        <td><span class="tier-badge ${e.tier==='free'?'tb-free':e.tier==='mid'?'tb-mid':'tb-paid'}">${e.tier}</span></td>
+        <td style="color:var(--t2);font-family:'Courier New',monospace;">${e.tokens||'—'}</td>
+        <td style="color:var(--kiwi);font-family:'Courier New',monospace;">${e.cost>0?'$'+e.cost.toFixed(5):'Free'}</td>
+      </tr>`).join('') || '<tr><td colspan="5" style="color:var(--t3);text-align:center;padding:14px;">No data yet</td></tr>';
+  } catch {}
+}
+
+// ═══════════════════════════════════════════════════
+// MEMORY
+// ═══════════════════════════════════════════════════
+async function loadMemory() {
+  try {
+    const mem = await fetch('/api/memory').then(r=>r.json());
+    const list = document.getElementById('memList');
+    const keys = Object.keys(mem);
+    if (!keys.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--t3);padding:10px;">No memory yet. Chat with your agent and it will start learning about you.</div>';
+      return;
+    }
+    list.innerHTML = keys.map(k=>`
+      <div class="mem-item">
+        <span class="mem-key">${k}</span>
+        <span class="mem-val">${mem[k]}</span>
+        <button class="btn btn-d" style="padding:2px 8px;font-size:11px;" onclick="deleteMemKey('${k}')">✕</button>
+      </div>`).join('');
+  } catch {}
+}
+async function deleteMemKey(key) {
+  await fetch('/api/memory',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+  loadMemory();
+}
+async function clearMemory() {
+  if (!confirm('Clear all memory? This cannot be undone.')) return;
+  await fetch('/api/memory',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+  loadMemory();
+  toast('Memory cleared','ok');
+}
+
+// ═══════════════════════════════════════════════════
+// STATUS POLLING
+// ═══════════════════════════════════════════════════
+async function checkStatus() {
+  try {
+    const d = await fetch('/api/status').then(r=>r.json());
+    document.getElementById('dot').className = 'dot';
+    document.getElementById('agentStatus').textContent = 'Agent Online';
+    document.getElementById('sbModel').textContent = d.activeModel || 'None';
+    const tier = d.activeTier||'free';
+    const sb = document.getElementById('sbTier');
+    sb.textContent = tier.toUpperCase();
+    sb.className = 'tier-badge ' + (tier==='free'?'tb-free':tier==='mid'?'tb-mid':'tb-paid');
+    if (d.activeTier && d.activeTier !== 'none') {
+      localStorage.setItem('ks_'+MODELS.find(m=>m.name===d.activeModel)?.key,'1');
+      updateModelChip();
+    }
+  } catch {
+    document.getElementById('dot').className = 'dot red';
+    document.getElementById('agentStatus').textContent = 'Connecting...';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+function toast(msg, type='ok') {
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span style="color:${type==='ok'?'var(--kiwi)':'var(--red)'}">${type==='ok'?'✓':'✗'}</span> ${msg}`;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+updateSkillChips();
+updateModelChip();
+checkStatus();
+loadKeys();
+setInterval(checkStatus, 30000);
+</script>
+</body>
+</html>
