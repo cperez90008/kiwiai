@@ -9,6 +9,11 @@
 
 set -e
 
+# ── Fix for curl|bash — reattach stdin to terminal ───────────
+if [ ! -t 0 ]; then
+  exec < /dev/tty
+fi
+
 GITHUB_RAW="https://raw.githubusercontent.com/cperez90008/kiwiai/main"
 KIWI_DIR="/opt/kiwiai"
 
